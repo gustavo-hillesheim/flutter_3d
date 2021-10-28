@@ -10,7 +10,7 @@ class Renderer3d extends StatelessWidget {
   final double focalLength;
   final Cube cube;
 
-  Renderer3d({
+  const Renderer3d({
     required this.height,
     required this.width,
     required this.focalLength,
@@ -47,7 +47,6 @@ class Painter3d extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final strokePaint = Paint()
       ..color = Colors.white
-      ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
     final fillPaint = Paint()..color = Colors.blue;
 
@@ -55,17 +54,7 @@ class Painter3d extends CustomPainter {
         .map((v) => project(v, focalLength, width, height))
         .toList();
     for (final face in cube.faces) {
-      final p1 = cube.vertices[face[0]];
-      final p2 = cube.vertices[face[1]];
-      final p3 = cube.vertices[face[2]];
-
-      final v1 = Point3d(p2.x - p1.x, p2.y - p1.y, p2.z - p1.z);
-      final v2 = Point3d(p3.x - p1.x, p3.y - p1.y, p3.z - p1.z);
-
-      final n = Point3d(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z,
-          v1.x * v2.y - v1.y * v2.x);
-
-      if (-p1.x * n.x + -p1.y * n.y + -p1.z * n.z < 0) {
+      if (_isFrontFace(face, cube.vertices)) {
         final path = Path();
         path.moveTo(vertices[face[0]].x, vertices[face[0]].y);
         path.lineTo(vertices[face[1]].x, vertices[face[1]].y);
@@ -76,6 +65,19 @@ class Painter3d extends CustomPainter {
         canvas.drawPath(path, strokePaint);
       }
     }
+  }
+
+  bool _isFrontFace(List<int> face, List<Point3d> vertices) {
+    final p1 = vertices[face[0]];
+    final p2 = vertices[face[1]];
+    final p3 = vertices[face[2]];
+
+    final v1 = Point3d(p2.x - p1.x, p2.y - p1.y, p2.z - p1.z);
+    final v2 = Point3d(p3.x - p1.x, p3.y - p1.y, p3.z - p1.z);
+
+    final n = Point3d(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z,
+        v1.x * v2.y - v1.y * v2.x);
+    return -p1.x * n.x + -p1.y * n.y + -p1.z * n.z < 0;
   }
 
   Point2d project(
@@ -95,7 +97,7 @@ class Point2d {
   final double x;
   final double y;
 
-  Point2d(this.x, this.y);
+  const Point2d(this.x, this.y);
 }
 
 class Point3d {
@@ -103,64 +105,88 @@ class Point3d {
   final double y;
   final double z;
 
-  Point3d(this.x, this.y, this.z);
+  const Point3d(this.x, this.y, this.z);
+}
+
+class Rotation {
+  final double x;
+  final double y;
+
+  const Rotation(this.x, this.y);
 }
 
 class Cube {
-  final double x;
-  final double y;
-  final double z;
-  late final double size;
-  late final List<Point3d> vertices;
-  late final List<List<int>> faces;
+  final Point3d position;
+  final double size;
+  List<Point3d> _vertices = [];
+  final List<List<int>> faces;
+
+  List<Point3d> get vertices => _vertices;
 
   Cube({
-    required this.x,
-    required this.y,
-    required this.z,
-    required double size,
-  }) {
-    size *= 0.5;
-    this.size = size;
-    vertices = [
-      Point3d(x - size, y - size, z - size),
-      Point3d(x + size, y - size, z - size),
-      Point3d(x + size, y + size, z - size),
-      Point3d(x - size, y + size, z - size),
-      Point3d(x - size, y - size, z + size),
-      Point3d(x + size, y - size, z + size),
-      Point3d(x + size, y + size, z + size),
-      Point3d(x - size, y + size, z + size),
+    required this.position,
+    required this.size,
+    Rotation initialRotation = const Rotation(0, 0),
+  }) : faces = [
+          [0, 1, 2, 3],
+          [0, 4, 5, 1],
+          [1, 5, 6, 2],
+          [3, 2, 6, 7],
+          [0, 3, 7, 4],
+          [4, 7, 6, 5],
+        ] {
+    final x = position.x;
+    final y = position.y;
+    final z = position.z;
+    _vertices = [
+      Point3d(x - size * 0.5, y - size * 0.5, z - size * 0.5),
+      Point3d(x + size * 0.5, y - size * 0.5, z - size * 0.5),
+      Point3d(x + size * 0.5, y + size * 0.5, z - size * 0.5),
+      Point3d(x - size * 0.5, y + size * 0.5, z - size * 0.5),
+      Point3d(x - size * 0.5, y - size * 0.5, z + size * 0.5),
+      Point3d(x + size * 0.5, y - size * 0.5, z + size * 0.5),
+      Point3d(x + size * 0.5, y + size * 0.5, z + size * 0.5),
+      Point3d(x - size * 0.5, y + size * 0.5, z + size * 0.5),
     ];
-    faces = [
-      [0, 1, 2, 3],
-      [0, 4, 5, 1],
-      [1, 5, 6, 2],
-      [3, 2, 6, 7],
-      [0, 3, 7, 4],
-      [4, 7, 6, 5],
-    ];
+    _vertices =
+        _rotateY(_vertices, rotation: initialRotation.y, origin: position);
+    _vertices =
+        _rotateX(_vertices, rotation: initialRotation.x, origin: position);
   }
 
-  void rotateX(double radian) {
-    final cosine = cos(radian);
-    final sine = sin(radian);
-    for (var index = vertices.length - 1; index > -1; --index) {
-      final p = vertices[index];
-      final y = (p.y - this.y) * cosine - (p.z - this.z) * sine;
-      final z = (p.y - this.y) * sine + (p.z - this.z) * cosine;
-      vertices[index] = Point3d(p.x, y + this.y, z + this.z);
-    }
+  void rotateX(double rotation) {
+    _vertices = _rotateX(vertices, rotation: rotation, origin: position);
   }
 
-  void rotateY(double radian) {
-    final cosine = cos(radian);
-    final sine = sin(radian);
-    for (var index = vertices.length - 1; index > -1; --index) {
-      final p = vertices[index];
-      final x = (p.z - this.z) * sine + (p.x - this.x) * cosine;
-      final z = (p.z - this.z) * cosine - (p.x - this.x) * sine;
-      vertices[index] = Point3d(x + this.x, p.y, z + this.z);
-    }
+  void rotateY(double rotation) {
+    _vertices = _rotateY(vertices, rotation: rotation, origin: position);
   }
+}
+
+List<Point3d> _rotateX(
+  List<Point3d> points, {
+  required double rotation,
+  required Point3d origin,
+}) {
+  final cosine = cos(rotation);
+  final sine = sin(rotation);
+  return points.map((p) {
+    final y = (p.y - origin.y) * cosine - (p.z - origin.z) * sine;
+    final z = (p.y - origin.y) * sine + (p.z - origin.z) * cosine;
+    return Point3d(p.x, y + origin.y, z + origin.z);
+  }).toList(growable: false);
+}
+
+List<Point3d> _rotateY(
+  List<Point3d> points, {
+  required double rotation,
+  required Point3d origin,
+}) {
+  final cosine = cos(rotation);
+  final sine = sin(rotation);
+  return points.map((p) {
+    final x = (p.z - origin.z) * sine + (p.x - origin.x) * cosine;
+    final z = (p.z - origin.z) * cosine - (p.x - origin.x) * sine;
+    return Point3d(x + origin.x, p.y, z + origin.z);
+  }).toList(growable: false);
 }

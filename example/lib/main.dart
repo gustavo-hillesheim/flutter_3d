@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_3d/flutter_3d.dart';
@@ -13,10 +13,9 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final cube = Cube(
-    x: 0,
-    y: 0,
-    z: 400,
+  final _cube = Cube(
+    position: const Point3d(0, 0, 400),
+    initialRotation: const Rotation(math.pi * 0.20, math.pi * 0.25),
     size: 250,
   );
 
@@ -26,8 +25,8 @@ class _MyAppState extends State<MyApp> {
       home: GestureDetector(
         onPanUpdate: (details) {
           setState(() {
-            cube.rotateX(details.delta.dy * 0.01);
-            cube.rotateY(details.delta.dx * -0.01);
+            _cube.rotateX(details.delta.dy * 0.01);
+            _cube.rotateY(details.delta.dx * -0.01);
           });
         },
         child: Center(
@@ -35,7 +34,7 @@ class _MyAppState extends State<MyApp> {
             width: 300,
             height: 300,
             focalLength: 200,
-            cube: cube,
+            cube: _cube,
           ),
         ),
       ),

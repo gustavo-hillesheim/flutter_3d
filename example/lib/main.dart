@@ -14,27 +14,29 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final _cube = Cube(
-    position: const Point3d(0, 0, 400),
+    position: const Point3d(100, 0, 400),
     initialRotation: const Rotation(math.pi * 0.20, math.pi * 0.25),
-    size: 250,
+    size: 200,
   );
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: GestureDetector(
-        onPanUpdate: (details) {
-          setState(() {
-            _cube.rotateX(details.delta.dy * 0.01);
-            _cube.rotateY(details.delta.dx * -0.01);
-          });
-        },
-        child: Center(
-          child: Renderer3d(
-            width: 300,
-            height: 300,
-            focalLength: 200,
-            cube: _cube,
+      home: Scaffold(
+        body: SizedBox.expand(
+          child: GestureDetector(
+            onPanUpdate: (details) {
+              setState(() {
+                _cube.rotateX(details.delta.dy * 0.01);
+                _cube.rotateY(details.delta.dx * -0.01);
+              });
+            },
+            child: Center(
+              child: Renderer3d(
+                focalLength: 200,
+                cube: _cube,
+              ),
+            ),
           ),
         ),
       ),

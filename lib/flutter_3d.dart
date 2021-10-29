@@ -5,40 +5,42 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 class Renderer3d extends StatelessWidget {
-  final double height;
-  final double width;
   final double focalLength;
+  final double? width;
+  final double? height;
   final Cube cube;
 
   const Renderer3d({
-    required this.height,
-    required this.width,
     required this.focalLength,
     required this.cube,
+    this.width,
+    this.height,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      height: height,
-      child: CustomPaint(
-        painter: Painter3d(
-            height: height, width: width, focalLength: focalLength, cube: cube),
-      ),
-    );
+    return LayoutBuilder(builder: (_, constraints) {
+      return Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.red, width: 10),
+        ),
+        child: CustomPaint(
+          size: Size(
+            width ?? constraints.maxWidth,
+            height ?? constraints.maxHeight,
+          ),
+          painter: Painter3d(focalLength: focalLength, cube: cube),
+        ),
+      );
+    });
   }
 }
 
 class Painter3d extends CustomPainter {
-  final double width;
-  final double height;
   final double focalLength;
   final Cube cube;
 
   Painter3d({
-    required this.width,
-    required this.height,
     required this.focalLength,
     required this.cube,
   });
@@ -46,12 +48,12 @@ class Painter3d extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final strokePaint = Paint()
-      ..color = Colors.white
+      ..color = Colors.black
       ..style = PaintingStyle.stroke;
     final fillPaint = Paint()..color = Colors.blue;
 
     final vertices = cube.vertices
-        .map((v) => project(v, focalLength, width, height))
+        .map((v) => project(v, focalLength, size.width, size.height))
         .toList();
     for (final face in cube.faces) {
       if (_isFrontFace(face, cube.vertices)) {

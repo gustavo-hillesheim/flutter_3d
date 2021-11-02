@@ -20,17 +20,12 @@ class Renderer3d extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (_, constraints) {
-      return Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.red, width: 10),
+      return CustomPaint(
+        size: Size(
+          width ?? constraints.maxWidth,
+          height ?? constraints.maxHeight,
         ),
-        child: CustomPaint(
-          size: Size(
-            width ?? constraints.maxWidth,
-            height ?? constraints.maxHeight,
-          ),
-          painter: Painter3d(focalLength: focalLength, cube: cube),
-        ),
+        painter: Painter3d(focalLength: focalLength, cube: cube),
       );
     });
   }
@@ -48,15 +43,17 @@ class Painter3d extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final strokePaint = Paint()
-      ..color = Colors.black
+      ..color = Colors.white
       ..style = PaintingStyle.stroke;
     final fillPaint = Paint()..color = Colors.blue;
 
-    final vertices = cube.vertices
+    final rotatedVertices = _rotate(cube.vertices,
+        rotation: cube.rotation, aroundPoint: cube.position);
+    final vertices = rotatedVertices
         .map((v) => project(v, focalLength, size.width, size.height))
         .toList();
     for (final face in cube.faces) {
-      if (_isFrontFace(face, cube.vertices)) {
+      if (_isFrontFace(face, rotatedVertices)) {
         final path = Path();
         path.moveTo(vertices[face[0]].x, vertices[face[0]].y);
         path.lineTo(vertices[face[1]].x, vertices[face[1]].y);
@@ -108,18 +105,28 @@ class Point3d {
   final double z;
 
   const Point3d(this.x, this.y, this.z);
+
+  Point3d copyWith({double? x, double? y, double? z}) {
+    return Point3d(x ?? this.x, y ?? this.y, z ?? this.z);
+  }
 }
 
 class Rotation {
   final double x;
   final double y;
+  final double z;
 
-  const Rotation(this.x, this.y);
+  const Rotation(this.x, this.y, this.z);
+
+  Rotation copyWith({double? x, double? y, double? z}) {
+    return Rotation(x ?? this.x, y ?? this.y, z ?? this.z);
+  }
 }
 
 class Cube {
   final Point3d position;
   final double size;
+  final Rotation rotation;
   List<Point3d> _vertices = [];
   final List<List<int>> faces;
 
@@ -128,7 +135,7 @@ class Cube {
   Cube({
     required this.position,
     required this.size,
-    Rotation initialRotation = const Rotation(0, 0),
+    this.rotation = const Rotation(0, 0, 0),
   }) : faces = [
           [0, 1, 2, 3],
           [0, 4, 5, 1],
@@ -150,45 +157,58 @@ class Cube {
       Point3d(x + size * 0.5, y + size * 0.5, z + size * 0.5),
       Point3d(x - size * 0.5, y + size * 0.5, z + size * 0.5),
     ];
-    _vertices =
-        _rotateY(_vertices, rotation: initialRotation.y, origin: position);
-    _vertices =
-        _rotateX(_vertices, rotation: initialRotation.x, origin: position);
   }
 
-  void rotateX(double rotation) {
-    _vertices = _rotateX(vertices, rotation: rotation, origin: position);
+  Cube at({double? x, double? y, double? z}) {
+    return copyWith(
+      position: position.copyWith(x: x, y: y, z: z),
+      rotation: rotation,
+      size: size,
+    );
   }
 
-  void rotateY(double rotation) {
-    _vertices = _rotateY(vertices, rotation: rotation, origin: position);
+  Cube rotated({double? x, double? y, double? z}) {
+    return copyWith(
+      position: position,
+      rotation: rotation.copyWith(x: x, y: y, z: z),
+      size: size,
+    );
+  }
+
+  Cube copyWith({Point3d? position, Rotation? rotation, double? size}) {
+    return Cube(
+      position: position ?? this.position,
+      rotation: rotation ?? this.rotation,
+      size: size ?? this.size,
+    );
   }
 }
 
-List<Point3d> _rotateX(
+List<Point3d> _rotate(
   List<Point3d> points, {
-  required double rotation,
-  required Point3d origin,
+  required Rotation rotation,
+  required Point3d aroundPoint,
 }) {
-  final cosine = cos(rotation);
-  final sine = sin(rotation);
-  return points.map((p) {
-    final y = (p.y - origin.y) * cosine - (p.z - origin.z) * sine;
-    final z = (p.y - origin.y) * sine + (p.z - origin.z) * cosine;
-    return Point3d(p.x, y + origin.y, z + origin.z);
-  }).toList(growable: false);
-}
+  final xCos = cos(rotation.x);
+  final xSin = sin(rotation.x);
+  final yCos = cos(rotation.y);
+  final ySin = sin(rotation.y);
+  final zCos = cos(rotation.z);
+  final zSin = sin(rotation.z);
 
-List<Point3d> _rotateY(
-  List<Point3d> points, {
-  required double rotation,
-  required Point3d origin,
-}) {
-  final cosine = cos(rotation);
-  final sine = sin(rotation);
-  return points.map((p) {
-    final x = (p.z - origin.z) * sine + (p.x - origin.x) * cosine;
-    final z = (p.z - origin.z) * cosine - (p.x - origin.x) * sine;
-    return Point3d(x + origin.x, p.y, z + origin.z);
+  return points.map((point) {
+    final px = point.x - aroundPoint.x;
+    final py = point.y - aroundPoint.y;
+    final pz = point.z - aroundPoint.z;
+
+    final nx = zCos * yCos * px +
+        (zCos * ySin * xSin * py - zSin * xCos * py) +
+        (zCos * ySin * xCos * pz + zSin * xSin * pz);
+    final ny = zSin * yCos * px +
+        (zSin * ySin * xSin * py + zCos * xCos * py) +
+        (zSin * ySin * xCos * pz - zCos * xSin * pz);
+    final nz = -ySin * px + yCos * xSin * py + yCos * xCos * pz;
+
+    return Point3d(nx + aroundPoint.x, ny + aroundPoint.y, nz + aroundPoint.z);
   }).toList(growable: false);
 }

@@ -111,28 +111,31 @@ class _Flutter3dExampleState extends State<Flutter3dExample> {
         children: [
           const Text('Position'),
           _inputRow(
-            'X',
-            cube.position.x,
-            10,
-            (value) => setState(() {
+            key: 'position-x',
+            label: 'X',
+            initialValue: cube.position.x,
+            panMultiplier: 10,
+            onChange: (value) => setState(() {
               cube = cube.at(x: value);
             }),
           ),
           const SizedBox(height: 8),
           _inputRow(
-            'Y',
-            cube.position.y,
-            10,
-            (value) => setState(() {
+            key: 'position-y',
+            label: 'Y',
+            initialValue: cube.position.y,
+            panMultiplier: 10,
+            onChange: (value) => setState(() {
               cube = cube.at(y: value);
             }),
           ),
           const SizedBox(height: 8),
           _inputRow(
-            'Z',
-            cube.position.z,
-            10,
-            (value) => setState(() {
+            key: 'position-z',
+            label: 'Z',
+            initialValue: cube.position.z,
+            panMultiplier: 10,
+            onChange: (value) => setState(() {
               cube = cube.at(z: value);
             }),
           ),
@@ -143,40 +146,44 @@ class _Flutter3dExampleState extends State<Flutter3dExample> {
         children: [
           const Text('Rotation'),
           _inputRow(
-            'X',
-            cube.rotation.x,
-            0.1,
-            (value) => setState(() {
+            key: 'rotation-x',
+            label: 'X',
+            initialValue: cube.rotation.x,
+            panMultiplier: 0.1,
+            onChange: (value) => setState(() {
               cube = cube.rotated(x: value);
             }),
           ),
           const SizedBox(height: 8),
           _inputRow(
-            'Y',
-            cube.rotation.y,
-            0.1,
-            (value) => setState(() {
+            key: 'rotation-y',
+            label: 'Y',
+            initialValue: cube.rotation.y,
+            panMultiplier: 0.1,
+            onChange: (value) => setState(() {
               cube = cube.rotated(y: value);
             }),
           ),
           const SizedBox(height: 8),
           _inputRow(
-            'Z',
-            cube.rotation.z,
-            0.1,
-            (value) => setState(() {
+            key: 'rotation-z',
+            label: 'Z',
+            initialValue: cube.rotation.z,
+            panMultiplier: 0.1,
+            onChange: (value) => setState(() {
               cube = cube.rotated(z: value);
             }),
           ),
         ],
       );
 
-  Widget _inputRow(
-    String label,
-    double initialValue,
-    double panMultiplier,
-    ValueChanged<double> onChange,
-  ) {
+  Widget _inputRow({
+    required String key,
+    required String label,
+    required double initialValue,
+    required double panMultiplier,
+    required ValueChanged<double> onChange,
+  }) {
     return SizedBox(
       height: 50,
       child: Row(
@@ -186,6 +193,7 @@ class _Flutter3dExampleState extends State<Flutter3dExample> {
           const SizedBox(width: 8),
           Expanded(
             child: SlidableNumberField(
+              key: ValueKey(key),
               initialValue: initialValue,
               valueMultiplier: panMultiplier,
               onChange: onChange,
@@ -214,10 +222,10 @@ class SlidableNumberField extends StatefulWidget {
 }
 
 class _SlidableNumberFieldState extends State<SlidableNumberField> {
-  late Timer _timer;
+  Timer? _timer;
   double _initialPan = 0;
   double _finalPan = 0;
-  TextEditingController? _textController;
+  final _textController = TextEditingController();
   final _focusNode = FocusNode();
 
   @override
@@ -228,31 +236,37 @@ class _SlidableNumberFieldState extends State<SlidableNumberField> {
         _initialPan = 0;
         _finalPan = 0;
       }
+      setState(() {});
     });
-    _timer = Timer.periodic(const Duration(milliseconds: 10), _updateValue);
-    _textController = TextEditingController(
-      text: widget.initialValue.toStringAsFixed(2),
-    );
+    _textController.text = widget.initialValue.toStringAsFixed(2);
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    _timer?.cancel();
     _focusNode.dispose();
-    _textController?.dispose();
+    _textController.dispose();
     super.dispose();
+  }
+
+  void _createTimer() {
+    if (_timer != null && _timer!.isActive) {
+      _timer!.cancel();
+    }
+    _timer = Timer.periodic(const Duration(milliseconds: 10), _updateValue);
   }
 
   void _updateValue(_) {
     final difference = (_finalPan - _initialPan) * 0.01;
     final newValue = difference * widget.valueMultiplier + widget.initialValue;
     widget.onChange(newValue);
-    _textController?.text = newValue.toStringAsFixed(2);
+    _textController.text = newValue.toStringAsFixed(2);
   }
 
   @override
   Widget build(BuildContext context) {
     final textField = TextFormField(
+      key: widget.key,
       controller: _textController,
       focusNode: _focusNode,
       onChanged: (v) {
@@ -270,6 +284,7 @@ class _SlidableNumberFieldState extends State<SlidableNumberField> {
       },
       onHorizontalDragStart: (details) {
         _initialPan = details.localPosition.dx;
+        _createTimer();
       },
       onHorizontalDragUpdate: (details) {
         _finalPan = details.localPosition.dx;
@@ -277,8 +292,12 @@ class _SlidableNumberFieldState extends State<SlidableNumberField> {
       onHorizontalDragEnd: (_) {
         _initialPan = 0;
         _finalPan = 0;
+        if (_timer != null && _timer!.isActive) {
+          _timer!.cancel();
+        }
       },
       child: IgnorePointer(
+        ignoring: !_focusNode.hasFocus,
         child: textField,
       ),
     );

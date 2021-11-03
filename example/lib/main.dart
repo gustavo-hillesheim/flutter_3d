@@ -27,7 +27,7 @@ class Flutter3dExample extends StatefulWidget {
 
 class _Flutter3dExampleState extends State<Flutter3dExample> {
   var cube = Cube(
-    position: const Point3d(0, 0, 1000),
+    position: const Point3D(0, 0, 1000),
     rotation: const Rotation(math.pi * 0.25, math.pi * 0.20, math.pi * 0.19),
     size: 250,
   );
@@ -36,9 +36,9 @@ class _Flutter3dExampleState extends State<Flutter3dExample> {
   Widget build(BuildContext context) {
     final cubeRenderer = Expanded(
       child: Center(
-        child: Renderer3d(
+        child: Object3DRenderer(
           focalLength: 500,
-          cube: cube,
+          object: cube,
         ),
       ),
     );

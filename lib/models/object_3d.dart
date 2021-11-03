@@ -3,8 +3,7 @@ import 'models.dart';
 abstract class Object3D<R extends Object3D<dynamic>> {
   Point3D get position;
   Rotation get rotation;
-  List<List<int>> get faces;
-  List<Point3D> get vertices;
+  List<Face> get faces;
 
   R copyWith({Point3D? position, Rotation? rotation});
 

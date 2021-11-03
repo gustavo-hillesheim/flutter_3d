@@ -49,32 +49,36 @@ class Object3DPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
     final fillPaint = Paint()..color = Colors.blue;
 
-    final rotatedVertices = _rotate(object.vertices,
-        rotation: object.rotation, aroundPoint: object.position);
-    final vertices = rotatedVertices
-        .map((v) => project(v, focalLength, size.width, size.height))
-        .toList();
     for (final face in object.faces) {
-      if (face.isEmpty) {
+      if (face.vertices.isEmpty) {
         continue;
       }
-      if (_isFrontFace(face, rotatedVertices)) {
+      final rotatedVertices = _rotate(
+        face.vertices,
+        rotation: object.rotation,
+        aroundPoint: object.position,
+      );
+      final vertices = rotatedVertices
+          .map((v) => project(v, focalLength, size.width, size.height))
+          .toList();
+
+      if (_isFrontFace(rotatedVertices)) {
         final path = Path();
-        path.moveTo(vertices[face[0]].x, vertices[face[0]].y);
-        for (int i = 1; i < face.length; i++) {
-          path.lineTo(vertices[face[i]].x, vertices[face[i]].y);
+        path.moveTo(vertices[0].x, vertices[0].y);
+        for (int i = 1; i < face.vertices.length; i++) {
+          path.lineTo(vertices[i].x, vertices[i].y);
         }
-        path.lineTo(vertices[face[0]].x, vertices[face[0]].y);
+        path.lineTo(vertices[0].x, vertices[0].y);
         canvas.drawPath(path, fillPaint);
         canvas.drawPath(path, strokePaint);
       }
     }
   }
 
-  bool _isFrontFace(List<int> face, List<Point3D> vertices) {
-    final p1 = vertices[face[0]];
-    final p2 = vertices[face[1]];
-    final p3 = vertices[face[2]];
+  bool _isFrontFace(List<Point3D> face) {
+    final p1 = face[0];
+    final p2 = face[1];
+    final p3 = face[2];
 
     final v1 = Point3D(p2.x - p1.x, p2.y - p1.y, p2.z - p1.z);
     final v2 = Point3D(p3.x - p1.x, p3.y - p1.y, p3.z - p1.z);

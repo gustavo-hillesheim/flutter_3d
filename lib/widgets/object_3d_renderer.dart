@@ -44,11 +44,6 @@ class Object3DPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final strokePaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke;
-    final fillPaint = Paint()..color = Colors.blue;
-
     for (final face in object.faces) {
       if (face.vertices.isEmpty) {
         continue;
@@ -69,8 +64,9 @@ class Object3DPainter extends CustomPainter {
           path.lineTo(vertices[i].x, vertices[i].y);
         }
         path.lineTo(vertices[0].x, vertices[0].y);
-        canvas.drawPath(path, fillPaint);
-        canvas.drawPath(path, strokePaint);
+        for (var paint in face.texture.paints) {
+          canvas.drawPath(path, paint);
+        }
       }
     }
   }
